@@ -1,0 +1,48 @@
+#!/bin/bash
+source ~/.bashrc
+
+
+DIR=$(readlink -f . | sed 's:^/chroot::' | cut -d/ -f-4)
+MAGENTO2_DB=$(sudo cat  ${DIR}/app/etc/env.php 2> /dev/null | awk '/dbname/{print $3}' | sed s'/,//'g | sed "s/'//"g)
+MAGENTO2_DB2=$(sudo cat  ${DIR}/html/app/etc/env.php 2> /dev/null | awk '/dbname/{print $3}' | sed s'/,//'g | sed "s/'//"g)
+MAGENTO1_DB=$(sudo cat  ${DIR}/html/app/etc/local.xml 2> /dev/null | grep -i db | grep -Po $(sup_getusr)'_\w+' )
+WORDPRESS_DB=$(sudo cat ${DIR}/html/wp-config.php 2> /dev/null |awk '/DB_NAME/{print $3}' | sed "s/'//g")
+
+if [[ -e ${DIR}'/app/etc/env.php' ]]
+then
+        echo "Creating a database copy of ${MAGENTO2_DB}"
+        mysqldump --defaults-extra-file=/root/.my.cnf --defaults-group-suffix=_root --opt --skip-lock-tables --routines "$MAGENTO2_DB" > ~/"${MAGENTO2_DB}-$(date '+%F').sql"
+        sudo mv "$HOME/${MAGENTO2_DB}-$(date '+%F').sql" .
+        sudo chown $(sup_getusr):$(sup_getusr) ${MAGENTO2_DB}-$(date '+%F').sql
+        echo "${MAGENTO2_DB}-$(date '+%F').sql"
+
+elif [[ -e ${DIR}'/html/app/etc/env.php' ]];
+then
+        echo "Creating a database copy of ${MAGENTO2_DB2}"
+        mysqldump --defaults-extra-file=/root/.my.cnf --defaults-group-suffix=_root --opt --skip-lock-tables --routines "$MAGENTO2_DB2" > ~/"${MAGENTO2_DB2}-$(date '+%F').sql"
+        sudo mv "$HOME/${MAGENTO2_DB2}-$(date '+%F').sql" .
+        sudo chown $(sup_getusr):$(sup_getusr) ${MAGENTO2_DB2}-$(date '+%F').sql
+        echo "${MAGENTO2_DB2}-$(date '+%F').sql"
+
+
+elif [[ -e ${DIR}'/html/app/etc/local.xml' ]];
+then
+        echo "Creating a database copy of ${MAGENTO1_DB}"
+        mysqldump --defaults-extra-file=/root/.my.cnf --defaults-group-suffix=_root --opt --skip-lock-tables --routines "$MAGENTO1_DB" > ~/"${MAGENTO1_DB}-$(date '+%F').sql"
+        sudo mv "~/${MAGENTO1_DB}-$(date '+%F').sql" .
+        sudo chown $(sup_getusr):$(sup_getusr) ${MAGENTO1_DB}-$(date '+%F').sql
+        echo "${MAGENTO1_DB}-$(date '+%F').sql"
+
+elif [[ -e ${DIR}'/html/wp-config.php' ]];
+then
+        echo "Creating a database copy of ${WORDPRESS_DB}"
+        mysqldump --defaults-extra-file=/root/.my.cnf --defaults-group-suffix=_root --opt --skip-lock-tables --routines "$WORDPRESS_DB" > ~/"${WORDPRESS_DB}-$(date '+%F').sql"
+        sudo mv "$HOME/${WORDPRESS_DB}-$(date '+%F').sql" . 
+        sudo chown $(sup_getusr):$(sup_getusr) ${WORDPRESS_DB}-$(date '+%F').sql
+        echo "${WORDPRESS_DB}-$(date '+%F').sql"
+
+else
+        echo 'No database found. Posssibly not a WordPress or Magento website.'
+fi
+
+

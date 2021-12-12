@@ -1,0 +1,23 @@
+#!/bin/bash
+
+while [ -n "$1" ]; do
+
+	case "$1" in
+
+	-a | --all) grep "server reached max_children setting" /var/opt/remi/php*/log/php-fpm/error.log ;;
+
+	-u| --user)
+		for PHP in $(ls /var/opt/remi/php*/log/php-fpm/error.log)
+                do
+                grep $2 $PHP | grep max_children
+                done ;;
+
+	-h | --help) printf "\t\tUSE ONLY ON CLOUD SERVERS \n-a|--all: Searches for all instances of max_children.\n-u|--user: Searches for all instances of max_children for that user.\n-h|--help: Shows this help prompt\n" ;; # Message for -c option
+
+	#*) echo "Option $1 not recognized. Use -h or --help for help." ;;
+
+	esac
+
+	shift
+
+done

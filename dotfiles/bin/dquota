@@ -1,0 +1,29 @@
+#!/bin/bash
+
+QUOTA=$(sudo quota -sg $1 2> /dev/null | awk  'NR==3 {print $3}' | sed 's/M//g')
+USUAGE=$(sudo quota -sg $1 2> /dev/null | awk  'NR==3 {print $2}' | sed 's/M//g')
+if [ -z $1 ] || [ ! -d /home/$1 ]
+	then
+		echo "Invalid user" && exit 1
+fi
+
+function box(){
+for i in $(seq 134)
+do
+printf '-'
+done
+printf \\n
+}
+
+DOMAINS=$(ls | grep -P '([a-z0-9]+)\.([a-zA-Z])$')
+for DOMAIN in $DOMAINS
+	do
+		box
+		printf "\t\t\t\t\t\t\t ${DOMAIN} \n"
+		box
+		sudo du /home/$1/$DOMAIN --max-depth=5 -h | sort -hr | head
+		box
+		printf "\t\t\t\t\t\t\t\t E-MAIL \n"
+		box
+		sudo du "/chroot/home/$1/var/$DOMAIN/mail" --max-depth=5 -h | sort -hr | head ;
+	done

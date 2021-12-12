@@ -1,0 +1,45 @@
+#!/bin/bash
+source ~/.bashrc
+
+
+DIR=$(readlink -f . | sed 's:^/chroot::' | cut -d/ -f-4)
+MAGENTO2_DB=$(sudo cat  ${DIR}/app/etc/env.php 2> /dev/null | awk '/dbname/{print $3}' | sed s'/,//'g | sed "s/'//"g)
+MAGENTO2_DB2=$(sudo cat  ${DIR}/html/app/etc/env.php 2> /dev/null | awk '/dbname/{print $3}' | sed s'/,//'g | sed "s/'//"g)
+MAGENTO1_DB=$(sudo cat ${DIR}/html/app/etc/local.xml 2> /dev/null | grep -i db | grep -Po $(readlink -f . | sed 's:^/chroot::' | cut -d/ -f3)'_\w+')
+MAGENTO1_TABLE=($(m $MAGENTO1_DB -e'SHOW TABLES  LIKE "%core_config_data%"' 2> /dev/null | grep -v '%' |grep -Po '(\w+)?core\w+'))
+MAGENTO2_TABLE=($(m $MAGENTO2_DB -e'SHOW TABLES  LIKE "%core_config_data%"' 2> /dev/null | grep -v '%' |grep -Po '(\w+)?core\w+'))
+MAGENTO2_TABLE2=($(m $MAGENTO2_DB2 -e'SHOW TABLES  LIKE "%core_config_data%"' 2> /dev/null | grep -v '%' |grep -Po '(\w+)?core\w+'))
+
+WORDPRESS_DB=$(sudo cat ${DIR}/html/wp-config.php 2> /dev/null |awk '/DB_NAME/{print $3}' | sed "s/'//g")
+WORDPRESS_TABLE=($(m $WORDPRESS_DB -e'SHOW TABLES LIKE "%wp_options%"' 2> /dev/null | grep -v '%' | grep -Po '(\w+)?wp\w+'))
+
+if [[ -e ${DIR}'/app/etc/env.php' ]]
+then
+        for TABLE in ${MAGENTO2_TABLE[*]};
+        do
+        m $MAGENTO2_DB -e"SELECT * FROM $TABLE WHERE path LIKE '%web%secure%'"
+        done
+
+elif [[ -e ${DIR}'/html/app/etc/env.php' ]];
+then
+        for TABLE in ${MAGENTO2_TABLE2[*]};
+        do
+        m $MAGENTO2_DB2 -e"SELECT * FROM $TABLE WHERE path LIKE '%web%secure%'"
+        done
+
+elif [[ -e ${DIR}'/html/app/etc/local.xml' ]];
+then
+        for TABLE in ${MAGENTO1_TABLE[*]};
+        do
+        m $MAGENTO1_DB -e"SELECT * FROM $TABLE WHERE path LIKE '%web%secure%'"
+        done
+
+elif [[ -e ${DIR}'/html/wp-config.php' ]];
+then
+        for TABLE in ${WORDPRESS_TABLE[*]};
+        do
+        m $WORDPRESS_DB -e"SELECT * FROM $TABLE WHERE option_name = 'siteurl' OR  option_name = 'home'"
+        done
+else
+	echo 'Please go to the document root.'
+fi

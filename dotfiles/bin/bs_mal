@@ -1,0 +1,161 @@
+bs_mal ()
+{
+    mkdir ~/yara &>/dev/null;
+    wget --no-check-certificate http://spamwars.nexcess.net/yara/compiled -O ~/yara/compiled &>/dev/null;
+    wget --no-check-certificate -O ~/yara/all-confirmed.txt https://mwscan.s3.amazonaws.com/mwscan.yar &>/dev/null;
+    SW_LOC=$(pwd);
+    SW_FQDN=$(hostname);
+    SW_ID=$(curl --data "ms_owner=$HOME&ms_domain=$SW_LOC&ms_fqdn=$SW_FQDN&ms_status=0" --silent http://spamwars.nexcess.net/public/malwares.php);
+    clear;
+    MyDATE=$(date +%s);
+    MyDIR=~/.malware-scan/$MyDATE;
+    mkdir -p $MyDIR;
+    echo '********************************************************';
+    curl -s http://briansnelson.com/stuff/malwarereport.txt;
+    echo -n 'All Reports saved to ';
+    echo $MyDIR;
+    echo '********************************************************';
+    echo;
+    echo -n 'Nexcess Scanner: START - ';
+    date;
+    malgrep 2> /dev/null >> $MyDIR/custom-results.txt;
+    MS_MALGREP=$(cat $MyDIR/custom-results.txt|wc -l);
+    curl --data "ms_id=$SW_ID&ms_malgrep=$MS_MALGREP" --silent http://spamwars.nexcess.net/public/malwares.php;
+    echo -n 'Nexcess Scanner: DONE - ';
+    date;
+    echo;
+    echo -n 'Maldet Scanner: START - ';
+    date;
+    cat /usr/local/maldetect/sess/session.hits.$(maldet -a $PWD | grep 'report'| cut -d':' -f3| awk '{print $3}') >> $MyDIR/maldet-results.txt;
+    MS_MALDET=$(cat $MyDIR/maldet-results.txt|wc -l);
+    curl --data "ms_id=$SW_ID&ms_maldet=$MS_MALDET" --silent http://spamwars.nexcess.net/public/malwares.php;
+    echo -n 'Maldet Scanner: DONE - ';
+    date;
+    echo;
+    echo -n 'StealRat Scanner: START - ';
+    date;
+    find $PWD -type f -print | xargs -d'\n' grep 'die(PHP_OS.chr(49).chr(48).chr(43).md5(0987654321)' >> $MyDIR/stealrat-results.txt;
+    echo -n 'StealRat Scanner: DONE - ';
+    date;
+    echo;
+    echo -n 'Yara Scanner: START - ';
+    date;
+    /usr/bin/yara -f -w -r /var/lib/clamav/includes.yara $PWD >> $MyDIR/yara-results.txt;
+    MS_YARA=$(cat $MyDIR/yara-results.txt|wc -l);
+    curl --data "ms_id=$SW_ID&ms_yara=$MS_YARA" --silent http://spamwars.nexcess.net/public/malwares.php;
+    echo -n 'Yara Scanner: DONE - ';
+    date;
+    echo;
+    echo -n 'Malware Scanner: START - ';
+    date;
+    /usr/bin/yara -f -w -r ~/yara/all-confirmed.txt $PWD >> $MyDIR/mage-results.txt;
+    MS_MALWARE=$(cat $MyDIR/mage-results.txt|wc -l);
+    curl --data "ms_id=$SW_ID&ms_malware=$MS_MALWARE" --silent http://spamwars.nexcess.net/public/malwares.php;
+    echo -n 'Malware Scanner: DONE - ';
+    date;
+    echo;
+    echo;
+    echo '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^';
+    echo '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^';
+    echo 'Nexcess Scan Results';
+    echo '********************************************************';
+    cat $MyDIR/custom-results.txt | grep chroot | cut -d":" -f1 | sort | uniq;
+    echo;
+    echo 'Nexcess Scan Stat Information';
+    echo '********************************************************';
+    for x in $(cat $MyDIR/custom-results.txt | grep chroot| cut -d":" -f1 | sort | uniq);
+    do
+        echo;
+        astat $x;
+    done | tee $MyDIR/custom-stat-results.txt;
+    echo;
+    echo 'Maldet Scan Results';
+    echo '********************************************************';
+    cat $MyDIR/maldet-results.txt;
+    echo;
+    echo 'Maldet Scan Stat Information';
+    echo '********************************************************';
+    for x in $(cat $MyDIR/maldet-results.txt| cut -d':' -f2);
+    do
+        echo;
+        astat $x;
+    done | tee $MyDIR/maldet-stat-results.txt;
+    echo;
+    echo 'StealRat Scan Results';
+    echo '********************************************************';
+    cat $MyDIR/stealrat-results.txt | cut -d':' -f1;
+    echo;
+    echo 'StealRat Scan Stat Information';
+    echo '********************************************************';
+    for x in $(cat $MyDIR/stealrat-results.txt| cut -d':' -f1);
+    do
+        echo;
+        astat $x;
+    done | tee $MyDIR/stealrat-stat-results.txt;
+    echo;
+    echo 'Yara Scan Results';
+    echo '********************************************************';
+    cat $MyDIR/yara-results.txt | awk '{print $2}' | uniq;
+    echo;
+    echo 'Yara Scan Stat Information';
+    echo '********************************************************';
+    for x in $(cat $MyDIR/yara-results.txt | awk '{print $2}'| uniq);
+    do
+        echo;
+        astat $x;
+    done | tee $MyDIR/yara-stat-results.txt;
+    echo;
+    echo 'Malware Scan Results';
+    echo '********************************************************';
+    cat $MyDIR/mage-results.txt | awk '{print $2}' | uniq;
+    echo;
+    echo 'Malware Scan Stat Information';
+    echo '********************************************************';
+    for x in $(cat $MyDIR/mage-results.txt | awk '{print $2}'| uniq);
+    do
+        echo;
+        astat $x;
+    done | tee $MyDIR/mage-stat-results.txt;
+    echo;
+    echo '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^';
+    echo '    END OF MALWARE REPORT';
+    echo '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^';
+    curl --data "ms_status=1&ms_id=$SW_ID" --silent http://spamwars.nexcess.net/public/malwares.php
+}
+bs_mal_account ()
+{
+    echo 'Reports can be found in '$HOME;
+    echo 'https://spamwars.nexcess.net/private/malware-scans.php?server='$(hostname);
+    if [ -n "$1" ]; then
+        MyDATE=$(date +%s);
+        for bpath in $(find -L /home/$1 -maxdepth 2 -type d -name 'html'  -not -path '/home/interworx/*' -not -path '/home/nex*');
+        do
+            cd $bpath;
+            bs_mal >> ~/bs_mal-$(echo $bpath|awk -F'/' '{print $3"-"$4}')-$(date |awk '{print $2""$3}')d-$MyDATE.txt;
+        done &
+    fi
+}
+bs_mal_domain ()
+{
+    echo 'Reports can be found in '$HOME;
+    echo 'https://spamwars.nexcess.net/private/malware-scans.php?server='$(hostname);
+    MyDATE=$(date +%s);
+    if [ -n "$1" ]; then
+        for bpath in $(find -L /home/*/$1 -maxdepth 1 -type d -name 'html'  -not -path '/home/interworx/*' -not -path '/home/nex*');
+        do
+            cd $bpath;
+            bs_mal >> ~/bs_mal-$(echo $bpath|awk -F'/' '{print $3"-"$4}')-$(date |awk '{print $2""$3}')d-$MyDATE.txt;
+        done &
+    fi
+}
+bs_mal_all ()
+{
+    echo 'Reports can be found in '$HOME;
+    echo 'https://spamwars.nexcess.net/private/malware-scans.php?server='$(hostname);
+    MyDATE=$(date +%s);
+    for bpath in $(find -L /home/ -maxdepth 3 -type d -name 'html'  -not -path '/home/interworx/*' -not -path '/home/nex*');
+    do
+        cd $bpath;
+        bs_mal >> ~/bs_mal-$(echo $bpath|awk -F'/' '{print $3"-"$4}')-$(date |awk '{print $2""$3}')d-$MyDATE.txt;
+    done & echo 'Serverwide Scan in effect - Sit back and grab a beer or two - this can take some time'
+}

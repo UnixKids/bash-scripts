@@ -1,0 +1,17 @@
+#!/bin/bash
+CHAR=($(head /dev/urandom | tr -cd [:alnum:]  | grep -Po [[:alnum:]]))
+Loop=0
+A=()
+
+if [ -z $1 ] || ! [ $1 -gt 0  ] 2> /dev/null
+then
+	printf "Please enter a valid interger. \n" && exit 1
+fi
+
+while [ $Loop -ne $1 ]
+	do
+		R=$(shuf -i 1-100 -n 1)
+		A+=${CHAR[$R]}
+		let Loop+=1
+	done
+echo $A
