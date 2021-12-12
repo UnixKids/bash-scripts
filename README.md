@@ -1,2 +1,2 @@
-#bash-scripts
+# bash-scripts
 Playground for all my new scripts
