@@ -1,0 +1,17 @@
+#/bin/bash
+
+IP=($(dig A $1 +short))
+WHOIS=($(whois ${IP[0]} | grep '^OrgName:' | awk '{ print $2}' | sed s/,//))
+
+if [[ $WHOIS =~ "Cloudflare"  ]] 
+then
+    printf "The website is using CloudFlare. Here are all the servers it might be on at Nexcess: \n"
+    findsite $1
+elif [[ "$WHOIS" =~ "Liquid" ]] 
+then
+    printf "The site is being hosted at either Nexcess or LiquidWeb. Logging into the server. \n"
+    me $A
+else
+    printf "The live site's A Record is/are ${IP[@]} and belong to $WHOIS. Here are the Nexcess servers it might be on: \n"
+    findsite $1
+fi
