@@ -1,4 +1,0 @@
-#!/bin/bash
-echo "Type an IP Address:"
-read varIP
-curl https://ipinfo.io/$varIP
